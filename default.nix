@@ -2,46 +2,68 @@
 
 let
   pname = "cursor";
-  version = "0.40.4";
-  appKey = "230313mzl4w4u92";
-  buildKey = "2409052yfcjagw2";
+  version = "0.47.9";
 
-  src = pkgs.fetchurl {
-    url = "https://download.todesktop.com/${appKey}/cursor-${version}-build-${buildKey}-x86_64.AppImage";
-    hash = "sha256-ZURE8UoLPw+Qo1e4xuwXgc+JSwGrgb/6nfIGXMacmSg=";
+  inherit (pkgs.stdenvNoCC) hostPlatform stdenvNoCC;
+
+  source = pkgs.fetchurl {
+    url = "https://downloads.cursor.com/production/b6fb41b5f36bda05cab7109606e7404a65d1ff32/linux/x64/Cursor-0.47.9-x86_64.AppImage";
+    hash = "sha256-L0ZODGHmO8SDhqrnkq7jwi30c6l+/ESj+FXHVKghsfc=";
   };
-  appimageContents = appimageTools.extract { inherit pname version src; };
+
+  appimageContents = appimageTools.extractType2 {
+    inherit version pname;
+    src = source;
+  };
+
+  wrappedAppimage = appimageTools.wrapType2 {
+    inherit version pname;
+    src = source;
+  };
+
 in
-appimageTools.wrapType2 {
-  inherit pname version src;
+pkgs.stdenvNoCC.mkDerivation {
+  inherit pname version;
+  src = if hostPlatform.isLinux then wrappedAppimage else source;
 
-  extraInstallCommands = ''
-    install -m 444 -D ${appimageContents}/${pname}.desktop -t $out/share/applications
-    substituteInPlace $out/share/applications/${pname}.desktop \
-      --replace-quiet 'Exec=AppRun' 'Exec=${pname}'
-    cp -r ${appimageContents}/usr/share/icons $out/share
+  nativeBuildInputs = pkgs.lib.optionals hostPlatform.isLinux [ pkgs.makeWrapper ]
+    ++ pkgs.lib.optionals hostPlatform.isDarwin [ pkgs.undmg ];
 
-    if [ -e ${appimageContents}/AppRun ]; then
-      install -m 755 -D ${appimageContents}/AppRun $out/bin/${pname}-${version}
-      if [ ! -L $out/bin/${pname} ]; then
-        ln -s $out/bin/${pname}-${version} $out/bin/${pname}
-      fi
-    else
-      echo "Error: Binary not found in extracted AppImage contents."
-      exit 1
-    fi
+  sourceRoot = pkgs.lib.optionalString hostPlatform.isDarwin ".";
+  dontUpdateAutotoolsGnuConfigScripts = hostPlatform.isDarwin;
+  dontConfigure = hostPlatform.isDarwin;
+  dontFixup = hostPlatform.isDarwin;
+
+  installPhase = ''
+    runHook preInstall
+    mkdir -p $out/
+
+    ${if hostPlatform.isLinux then ''
+      cp -r bin $out/bin
+      mkdir -p $out/share/cursor
+      cp -a ${appimageContents}/usr/share/cursor/locales $out/share/cursor
+      cp -a ${appimageContents}/usr/share/cursor/resources $out/share/cursor
+      cp -a ${appimageContents}/usr/share/icons $out/share/
+      install -Dm 644 ${appimageContents}/cursor.desktop -t $out/share/applications/
+
+      # substituteInPlace $out/share/applications/cursor.desktop --replace-fail "AppRun" "cursor"
+
+      wrapProgram $out/bin/cursor \
+        --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}} --no-update"
+    '' else ''
+      APP_DIR="$out/Applications"
+      CURSOR_APP="$APP_DIR/Cursor.app"
+      mkdir -p "$APP_DIR"
+      cp -Rp Cursor.app "$APP_DIR"
+      mkdir -p "$out/bin"
+      cat << EOF > "$out/bin/cursor"
+
+      #!${stdenvNoCC.shell}
+      open -na "$CURSOR_APP" --args "\$@"
+      EOF
+      chmod +x "$out/bin/cursor"
+    ''}
+
+    runHook postInstall
   '';
-
-  extraBwrapArgs = [
-    "--bind-try /etc/nixos/ /etc/nixos/"
-  ];
-
-  dieWithParent = false;
-
-  extraPkgs = pkgs: with pkgs; [
-    unzip
-    autoPatchelfHook
-    asar
-    (buildPackages.wrapGAppsHook.override { inherit (buildPackages) makeWrapper; })
-  ];
 }
