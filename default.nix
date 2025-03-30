@@ -2,13 +2,13 @@
 
 let
   pname = "cursor";
-  version = "0.47.9";
+  version = "0.48.1";
 
   inherit (pkgs.stdenvNoCC) hostPlatform stdenvNoCC;
 
   source = pkgs.fetchurl {
-    url = "https://downloads.cursor.com/production/b6fb41b5f36bda05cab7109606e7404a65d1ff32/linux/x64/Cursor-0.47.9-x86_64.AppImage";
-    hash = "sha256-L0ZODGHmO8SDhqrnkq7jwi30c6l+/ESj+FXHVKghsfc=";
+    url = "https://downloads.cursor.com/production/0139db98f117ab50fcaaf7a0b1c69d345bd98a14/linux/x64/Cursor-0.48.1-x86_64.AppImage";
+    hash = "sha256-Afy00ELL/BjXnerT3ip/A+/npqLvXkGZ4kjNuRaWtgU=";
   };
 
   appimageContents = appimageTools.extractType2 {
@@ -45,8 +45,6 @@ pkgs.stdenvNoCC.mkDerivation {
       cp -a ${appimageContents}/usr/share/cursor/resources $out/share/cursor
       cp -a ${appimageContents}/usr/share/icons $out/share/
       install -Dm 644 ${appimageContents}/cursor.desktop -t $out/share/applications/
-
-      # substituteInPlace $out/share/applications/cursor.desktop --replace-fail "AppRun" "cursor"
 
       wrapProgram $out/bin/cursor \
         --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}} --no-update"
