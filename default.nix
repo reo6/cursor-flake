@@ -2,13 +2,13 @@
 
 let
   pname = "cursor";
-  version = "0.48.1";
+  version = "0.48.7";
 
   inherit (pkgs.stdenvNoCC) hostPlatform stdenvNoCC;
 
   source = pkgs.fetchurl {
-    url = "https://downloads.cursor.com/production/0139db98f117ab50fcaaf7a0b1c69d345bd98a14/linux/x64/Cursor-0.48.1-x86_64.AppImage";
-    hash = "sha256-Afy00ELL/BjXnerT3ip/A+/npqLvXkGZ4kjNuRaWtgU=";
+    url = "https://downloads.cursor.com/production/66290080aae40d23364ba2371832bda0933a3641/linux/x64/Cursor-0.48.7-x86_64.AppImage";
+    hash = "sha256-nnPbv74DOcOqgnAqW2IZ1S/lVbfv8pSe6Ab5BOdzkrs=";
   };
 
   appimageContents = appimageTools.extractType2 {
