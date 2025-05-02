@@ -13,9 +13,13 @@
       in
       {
         packages.default = pkgs.callPackage ./default.nix {};
+        packages.legacy = pkgs.callPackage ./legacy.nix {};
 
         apps.default = flake-utils.lib.mkApp {
           drv = self.packages.${system}.default;
+        };
+        apps.legacy = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.legacy;
         };
       }
     );
